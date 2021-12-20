@@ -1,0 +1,3 @@
+services:
+    App\Model\GuzzleClientFactory\GuzzleClientFactoryInterface:
+        class: App\Model\GuzzleClientFactory\GuzzleClientTestFactory

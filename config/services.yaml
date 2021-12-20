@@ -1,0 +1,62 @@
+# This file is the entry point to configure your own services.
+# Files in the packages/ subdirectory configure your dependencies.
+
+# Put parameters here that don't need to change on each machine where the app is deployed
+# https://symfony.com/doc/current/best_practices/configuration.html#application-related-configuration
+parameters:
+services:
+    # default configuration for services in *this* file
+    _defaults:
+        autowire: true      # Automatically injects dependencies in your services.
+        autoconfigure: true # Automatically registers your services as commands, event subscribers, etc.
+        bind:
+            $projectDir: '%kernel.project_dir%'
+
+    # makes classes in src/ available to be used as services
+    # this creates a service per class whose id is the fully-qualified class name
+    App\:
+        resource: '../src/'
+        exclude:
+            - '../src/DependencyInjection/'
+            - '../src/Entity/'
+            - '../src/Kernel.php'
+            - '../src/Tests/'
+
+    # controllers are imported separately to make sure services can be injected
+    # as action arguments even if you don't extend any base controller class
+    App\Controller\:
+        resource: '../src/Controller/'
+        tags: [ 'controller.service_arguments' ]
+
+    App\ApiPlatform\OpenApiDecorator\JwtDecorator:
+        decorates: 'api_platform.openapi.factory'
+        autoconfigure: false
+
+    App\ApiPlatform\OpenApiDecorator\UserDecorator:
+        decorates: 'api_platform.openapi.factory'
+        autoconfigure: false
+
+    Symfony\Component\Serializer\NameConverter\CamelCaseToSnakeCaseNameConverter: ~
+
+    App\EventSubscriber\PostreFixSchemaSubscriber:
+        tags:
+            - { name: doctrine.event_subscriber, connection: default }
+
+    Doctrine\Migrations\Version\DbalMigrationFactory: ~
+
+    App\Doctrine\MigrationFactoryDecorator:
+        decorates: Doctrine\Migrations\Version\DbalMigrationFactory
+        arguments: [ '@App\Doctrine\MigrationFactoryDecorator.inner', '@service_container' ]
+
+    serializer.encode.json.unescaped:
+        class: Symfony\Component\Serializer\Encoder\JsonEncode
+        arguments:
+            - { "json_encode_options": !php/const JSON_UNESCAPED_UNICODE }
+
+    serializer.encoder.json:
+        class: Symfony\Component\Serializer\Encoder\JsonEncoder
+        arguments:
+            - '@serializer.encode.json.unescaped'
+
+    App\Model\GuzzleClientFactory\GuzzleClientFactoryInterface:
+        class: App\Model\GuzzleClientFactory\GuzzleClientFactory
