@@ -7,7 +7,9 @@
 - [Symfony 5](https://symfony.com/doc/current/index.html)
 - [Symfony Messenger](https://symfony.com/doc/current/event_dispatcher.html#creating-an-event-subscriber)
 - [ApiPlatform](https://api-platform.com/docs/core/)
-- [События](https://symfony.com/doc/current/event_dispatcher.html) и [Подписчики на события](https://symfony.com/doc/current/event_dispatcher.html#creating-an-event-subscriber)
+- [События](https://symfony.com/doc/current/event_dispatcher.html)
+  и [Подписчики на события](https://symfony.com/doc/current/event_dispatcher.html#creating-an-event-subscriber)
+- [PHPUnit](https://phpunit.readthedocs.io/ru/latest/)
 
 ## Минимальные требования к серверу:
 
@@ -34,6 +36,8 @@ composer install
 
 ## Создать БД и выполнить миграции:
 
+Необходимо предварительно установить PostgreSQL и запустить сервер БД. Скорректируйте строку в переменной
+окружения `DATABASE_URL`, если необходимо.
 ```
 php bin/console doctrine:database:create
 php bin/console doctrine:migrations:migrate
@@ -48,4 +52,41 @@ php bin/console doctrine:migrations:migrate
 В отдельной вкладке терминала выполните команду - `symfony serve`.
 
 После этого откройте в браузере адрес `https://127.0.0.1:8000/api/v1`. Должна открыться страница с интерактивной
-документацией к API. 
+документацией к API.
+
+На этой же странице можно протестировать процесс регистрации - `User -> Post -> Try it out`. При успешной регистрации
+возвращаются токены доступа.
+
+Таким же образом можно вручную тестировать выполненное тестовое задание.
+
+## Описание тестового задания
+
+После успешной регистрации пользователя (`POST /api/v1/users`) необходимо асинхронно сделать запрос на внешнюю CRM (
+например, Битрикс24) для создания Лида на основе регистрационных данных пользователя. Извлечь из ответа ID созданного
+лида и сохранить его в базу данных в строку этого пользователя.
+
+Выполнение **пунктов 4 и 7 необязательно**, но их выполнение будет большим плюсом.
+
+### Шаги выполнения задания:
+
+1) Добавить в сущность User поле (свойство) для хранения ID лида. Сгенерировать миграцию
+2) Изучить API Битрикс24 по созданию Лида - https://dev.1c-bitrix.ru/rest_help/crm/leads/crm_lead_add.php
+3) Создать файл `src/Service/Bitrix24Manager.php` с классом `App\Service\Bitrix24Manager`. В нем создать метод(ы),
+   который будет отправлять запрос на API Битрикс24 для создания лида (на основе данных ФИО, телефон, Email) и сохранять
+   в БД ID лида. Для отправки запроса к внешнему API необходимо с помощью Dependency Injection
+   использовать `GuzzleClientFactoryInterface`, который имеет метод `create` для создания клиента Guzzle. Можно
+   воспользоваться сервисом [RequestBin](https://requestbin.net/) для проверки отправленных запросов при ручном
+   тестировании.
+4) Добавить Unit-тест для проверки метода из **пункта 3**. В качестве зависимости используйте
+   сервис `GuzzleClientTestFactory` - он позволяет создавать тестовый Guzzle клиент, в который нужно заранее передать
+   ожидаемый ответ от "внешнего" сервера с помощью метода `GuzzleClientTestFactory::addResponse`. А с помощью
+   метода `GuzzleClientTestFactory::shiftRequest` можно получить сформированный запрос и проверить его в тесте.
+5) Создать [асинхронную задачу и обработчик для нее](https://symfony.com/doc/current/messenger.html). Асинхронная задача
+   будет инициализироваться в момент после регистрации и вызывать метод из **пункта 3**.
+6) Сделать так, чтобы асинхронная задача добавлялась в очередь в момент регистрации. В момент регистрации срабатывает
+   событие `RegisterEvent`, которое содержит в себе объект пользователя (User). Нужно среагировать на это событие и
+   создать асинхронную задачу. Для этого необходимо
+   создать [Подписчик на это событие](https://symfony.com/doc/current/event_dispatcher.html#creating-an-event-subscriber)
+7) Написать функциональный тест, который проверит процесс регистрации. В тесте необходимо проверить что после
+   регистрации был отправлен запрос на внешний сервис - в тестовом окружении в сервис `Bitrix24Manager` будет
+   автоматически использоваться в качестве зависимости сервис `GuzzleClientTestFactory` (см. **пункт 4**)
