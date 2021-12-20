@@ -1,16 +1,10 @@
 {
-    "name": "symfony/website-skeleton",
+    "name": "php-programmist/test-task",
     "type": "project",
     "license": "MIT",
-    "description": "A skeleton to start a new Symfony website",
+    "description": "Test task for candidate Middle PHP-Developer",
     "minimum-stability": "dev",
     "prefer-stable": true,
-    "repositories": [
-        {
-            "type": "vcs",
-            "url": "https://github.com/theofidry/AliceBundle"
-        }
-    ],
     "require": {
         "php": ">=8.0",
         "ext-ctype": "*",
